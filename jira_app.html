@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Links Jira</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #38bdf8;
+            border-radius: 10px;
+        }
+
+        /* Estilos para los items de selección */
+        .stage-item {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stage-item:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .active-stage {
+            border-left: 4px solid #38bdf8;
+            background: rgba(56, 189, 248, 0.1) !important;
+        }
+
+        .active-sub {
+            background: linear-gradient(135deg, #38bdf8, #6366f1) !important;
+            color: white !important;
+            font-weight: 600;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.4);
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #38bdf8 0%, #6366f1 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-generate:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px -5px rgba(56, 189, 248, 0.5);
+        }
+
+        .btn-generate:active {
+            transform: translateY(0px);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="container max-w-4xl w-full glass-panel rounded-2xl p-6 md:p-10">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
+                ⚡ Generador de Tickets Jira
+            </h1>
+            <p class="text-slate-400 mt-2">Configura rápidamente el flujo de trabajo para tu ticket</p>
+        </header>
+
+        <!-- Selector de Proyecto -->
+        <div class="mb-8">
+            <label class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">Proyecto Destino</label>
+            <select id="projectSelect" onchange="loadProject()" 
+                class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none appearance-none cursor-pointer transition-all">
+                <option value="">-- Selecciona un proyecto para ver el mapa --</option>
+                <option value="ROBOTS">ROBOTS</option>
+                <option value="OTRO">Soporte Técnico / Otro</option>
+            </select>
+        </div>
+
+        <!-- Mapa de Etapas y Subetapas -->
+        <div id="workflowSection" class="hidden animate-in fade-in duration-500">
+            <div class="grid grid-cols-12 gap-4 mb-2 px-2 text-xs font-bold text-slate-500 uppercase">
+                <div class="col-span-4">Etapa</div>
+                <div class="col-span-8">Sub-Etapas Disponibles</div>
+            </div>
+            
+            <div id="workflowContainer" class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 mb-8">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Formulario de Texto -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <label class="block text-sm font-semibold text-slate-400 mb-2">Resumen / Título</label>
+                <input type="text" id="summary" placeholder="Ej: Error en carga de archivo..." 
+                    class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl p-3 focus:border-sky-500 outline-none transition-all">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
+                <input type="text" id="description" placeholder="Breve contexto..." 
+                    class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl p-3 focus:border-sky-500 outline-none transition-all">
+            </div>
+        </div>
+
+        <!-- Botón y Resultado -->
+        <button onclick="generateURL()" class="btn-generate w-full text-white font-bold py-4 rounded-xl text-lg shadow-lg">
+            Generar Link de Jira
+        </button>
+
+        <div id="statusMessage" class="hidden mt-4 p-3 rounded-lg text-center text-sm font-medium"></div>
+
+        <div id="outputContainer" class="hidden mt-6 animate-in slide-in-from-bottom-4 duration-300">
+            <div class="p-4 bg-black/30 border border-slate-700 rounded-xl">
+                <p class="text-xs text-slate-500 mb-2 font-mono uppercase tracking-widest">URL Generada</p>
+                <div class="flex items-center gap-3">
+                    <a id="finalURL" href="#" target="_blank" class="text-sky-400 hover:text-sky-300 break-all font-mono text-sm underline decoration-sky-800"></a>
+                </div>
+                <button onclick="copyToClipboard()" class="mt-4 text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors">
+                    Copiar URL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const config = {
+            ROBOTS: {
+                "PLAN": ["Diseño de solucion", "Analisis de inputs", "Validación Técnica"],
+                "DATA": ["Solicitud de ingesta", "Limpieza de datos", "Mapeo de campos"],
+                "ANALITICA": ["Desarrollo Backend", "Frontend UI", "Productivizacion en Sandbox"],
+                "FULL PRODUCTION": "Canal"
+            },
+            BCBS: {
+                "INICIAL": ["Análisis de Requerimiento", "Factibilidad"],
+                "QA": ["Pruebas Unitarias", "Regresión", "UAT"]
+            }
+        };
+
+        let selectedEtapa = null;
+        let selectedSub = null;
+
+        function loadProject() {
+            const project = document.getElementById('projectSelect').value;
+            const workflowSection = document.getElementById('workflowSection');
+            const container = document.getElementById('workflowContainer');
+            
+            // Reset
+            container.innerHTML = '';
+            selectedEtapa = null;
+            selectedSub = null;
+            document.getElementById('outputContainer').classList.add('hidden');
+            hideMessage();
+
+            if (!config[project]) {
+                workflowSection.classList.add('hidden');
+                return;
+            }
+
+            workflowSection.classList.remove('hidden');
+
+            // Crear el mapa visual según la imagen de referencia
+            Object.keys(config[project]).forEach(etapa => {
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-12 gap-4 items-start';
+
+                // Columna Etapa (Izquierda)
+                const etapaCol = document.createElement('div');
+                etapaCol.className = 'col-span-4';
+                
+                const etapaBox = document.createElement('div');
+                etapaBox.id = `etapa-box-${etapa}`;
+                etapaBox.className = 'stage-item bg-slate-800/50 p-4 rounded-xl text-center font-bold text-slate-300 h-full flex items-center justify-center';
+                etapaBox.innerText = etapa;
+                etapaCol.appendChild(etapaBox);
+
+                // Columna Sub-etapas (Derecha)
+                const subsCol = document.createElement('div');
+                subsCol.className = 'col-span-8 flex flex-wrap gap-2';
+
+                config[project][etapa].forEach(sub => {
+                    const subBox = document.createElement('div');
+                    subBox.className = 'stage-item bg-slate-800/30 px-4 py-3 rounded-lg cursor-pointer text-sm text-slate-400 hover:text-white';
+                    subBox.innerText = sub;
+                    
+                    subBox.onclick = () => {
+                        // Limpiar previos
+                        document.querySelectorAll('.stage-item').forEach(el => {
+                            el.classList.remove('active-sub', 'active-stage');
+                        });
+
+                        // Marcar selección
+                        selectedEtapa = etapa;
+                        selectedSub = sub;
+                        subBox.classList.add('active-sub');
+                        etapaBox.classList.add('active-stage');
+                        
+                        hideMessage();
+                    };
+
+                    subsCol.appendChild(subBox);
+                });
+
+                row.appendChild(etapaCol);
+                row.appendChild(subsCol);
+                container.appendChild(row);
+            });
+        }
+
+        function generateURL() {
+            const project = document.getElementById('projectSelect').value;
+            const summary = document.getElementById('summary').value;
+            const description = document.getElementById('description').value;
+
+            if (!project) {
+                showMessage("Por favor, selecciona un proyecto primero.", "error");
+                return;
+            }
+            if (!selectedSub) {
+                showMessage("Debes seleccionar una Sub-Etapa del mapa.", "error");
+                return;
+            }
+            if (!summary.trim()) {
+                showMessage("El resumen es obligatorio.", "error");
+                return;
+            }
+
+            // Construcción de la URL
+            const baseUrl = "https://tu-jira.atlassian.net/secure/CreateIssueDetails!init.jspa";
+            const params = new URLSearchParams({
+                pid: project === 'ROBOTS' ? '10001' : '10002', // IDs de ejemplo
+                issuetype: '10001', // Tipo de tarea
+                summary: summary,
+                description: description,
+                // Campos personalizados (ajustar según tu Jira real)
+                'customfield_101': selectedEtapa, 
+                'customfield_102': selectedSub
+            });
+
+            const finalLink = `${baseUrl}?${params.toString()}`;
+            
+            const output = document.getElementById('outputContainer');
+            const linkElem = document.getElementById('finalURL');
+            
+            linkElem.innerText = finalLink;
+            linkElem.href = finalLink;
+            output.classList.remove('hidden');
+            
+            showMessage("¡Link generado con éxito!", "success");
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('statusMessage');
+            msg.innerText = text;
+            msg.className = `mt-4 p-3 rounded-lg text-center text-sm font-medium block animate-bounce ${
+                type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+            }`;
+        }
+
+        function hideMessage() {
+            document.getElementById('statusMessage').classList.add('hidden');
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('finalURL').innerText;
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showMessage("URL copiada al portapapeles", "success");
+            } catch (err) {
+                console.error('Error al copiar', err);
+            }
+            document.body.removeChild(textArea);
+        }
+        
+    </script>
+</body>
+</html>
