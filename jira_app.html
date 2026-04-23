@@ -92,8 +92,6 @@
             <select id="projectSelect" onchange="loadProject()" 
                 class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none appearance-none cursor-pointer transition-all">
                 <option value="">-- Selecciona un proyecto para ver el mapa --</option>
-                <option value="ROBOTS">ROBOTS</option>
-                <option value="OTRO">Soporte Técnico / Otro</option>
             </select>
         </div>
 
@@ -106,6 +104,46 @@
             
             <div id="workflowContainer" class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 mb-8">
                 <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Modal de Subetapa -->
+        <div id="subetapaModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div class="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-700 animate-in fade-in duration-300">
+                <h2 class="text-2xl font-bold text-sky-400 mb-6">Detalles de <span id="modalSubetapaName"></span></h2>
+                
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Título</label>
+                        <input type="text" id="modalTitle" placeholder="Ej: Implementar validación..." 
+                            class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
+                        <textarea id="modalDescription" placeholder="Detalles adicionales..." 
+                            class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all resize-none h-24"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-400 mb-2">Prioridad</label>
+                        <select id="modalPriority" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all">
+                            <option value="">-- Selecciona prioridad --</option>
+                            <option value="Baja">🟢 Baja</option>
+                            <option value="Media">🟡 Media</option>
+                            <option value="Alta">🔴 Alta</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="closeSubetapaModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmSubetapaDetails()" class="flex-1 bg-gradient-to-r from-sky-500 to-indigo-500 hover:opacity-90 text-white font-semibold py-2 rounded-lg transition-all">
+                        Confirmar
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -144,21 +182,78 @@
     </div>
 
     <script>
-        const config = {
-            ROBOTS: {
-                "PLAN": ["Diseño de solucion", "Analisis de inputs", "Validación Técnica"],
-                "DATA": ["Solicitud de ingesta", "Limpieza de datos", "Mapeo de campos"],
-                "ANALITICA": ["Desarrollo Backend", "Frontend UI", "Productivizacion en Sandbox"],
-                "FULL PRODUCTION": "Canal"
-            },
-            BCBS: {
-                "INICIAL": ["Análisis de Requerimiento", "Factibilidad"],
-                "QA": ["Pruebas Unitarias", "Regresión", "UAT"]
+        let config = {};
+
+        // Datos embebidos directamente en el HTML
+        const projectsData = {
+            "ROBOTS": {
+                "etapas": [
+                    {
+                        "name": "PLAN",
+                        "subetapas": [
+                            "Diseño de solucion",
+                            "Analisis de inputs",
+                            "Validación Técnica"
+                        ]
+                    },
+                    {
+                        "name": "DATA",
+                        "subetapas": [
+                            "Solicitud de ingesta",
+                            "Validacion de ingesta"
+                        ]
+                    },
+                    {
+                        "name": "ANALITICA",
+                        "subetapas": [
+                            "Desarrollo Backend",
+                            "Frontend UI",
+                            "Productivizacion en Sandbox"
+                        ]
+                    }
+                ]
             }
         };
 
+        function loadProjectsFromJSON() {
+            try {
+                console.log('Cargando proyectos...');
+                const jsonData = projectsData;
+                console.log('Proyectos disponibles:', jsonData);
+                
+                // Convertir estructura: etapas[] → etapas como keys
+                config = {};
+                for (const projectName in jsonData) {
+                    config[projectName] = {};
+                    jsonData[projectName].etapas.forEach(etapa => {
+                        config[projectName][etapa.name] = etapa.subetapas;
+                    });
+                }
+                
+                console.log('Config procesado:', config);
+                
+                // Poblar selector dinámicamente
+                const projectSelect = document.getElementById('projectSelect');
+                for (const projectName in config) {
+                    const option = document.createElement('option');
+                    option.value = projectName;
+                    option.innerText = projectName;
+                    projectSelect.appendChild(option);
+                    console.log('Proyecto agregado al selector:', projectName);
+                }
+                
+                if (Object.keys(config).length === 0) {
+                    console.warn('No se encontraron proyectos');
+                }
+            } catch (error) {
+                console.error('Error cargando proyectos:', error);
+                alert('Error al cargar proyectos: ' + error.message);
+            }
+        }
+
         let selectedEtapa = null;
         let selectedSub = null;
+        let selectedSubDetails = {}; // Almacenar detalles del modal
 
         function loadProject() {
             const project = document.getElementById('projectSelect').value;
@@ -215,6 +310,8 @@
                         subBox.classList.add('active-sub');
                         etapaBox.classList.add('active-stage');
                         
+                        // Abrir modal para detalles
+                        openSubetapaModal(sub);
                         hideMessage();
                     };
 
@@ -295,6 +392,61 @@
             }
             document.body.removeChild(textArea);
         }
+
+        function openSubetapaModal(subetapa) {
+            console.log('Abriendo modal para:', subetapa);
+            document.getElementById('modalSubetapaName').innerText = subetapa;
+            
+            // Cargar datos previos si existen
+            if (selectedSubDetails[subetapa]) {
+                document.getElementById('modalTitle').value = selectedSubDetails[subetapa].title || '';
+                document.getElementById('modalDescription').value = selectedSubDetails[subetapa].description || '';
+                document.getElementById('modalPriority').value = selectedSubDetails[subetapa].priority || '';
+            } else {
+                document.getElementById('modalTitle').value = '';
+                document.getElementById('modalDescription').value = '';
+                document.getElementById('modalPriority').value = '';
+            }
+            
+            document.getElementById('subetapaModal').classList.remove('hidden');
+            document.getElementById('modalTitle').focus();
+        }
+
+        function closeSubetapaModal() {
+            document.getElementById('subetapaModal').classList.add('hidden');
+        }
+
+        function confirmSubetapaDetails() {
+            const title = document.getElementById('modalTitle').value.trim();
+            const description = document.getElementById('modalDescription').value.trim();
+            const priority = document.getElementById('modalPriority').value;
+            
+            if (!title) {
+                alert('El título es obligatorio');
+                return;
+            }
+            
+            // Guardar los detalles
+            selectedSubDetails[selectedSub] = {
+                title: title,
+                description: description,
+                priority: priority
+            };
+            
+            console.log('Detalles guardados para:', selectedSub, selectedSubDetails[selectedSub]);
+            
+            closeSubetapaModal();
+            showMessage(`✓ Detalles guardados para: ${selectedSub}`, 'success');
+        }
+
+        // Cerrar modal al presionar ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSubetapaModal();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadProjectsFromJSON);
         
     </script>
 </body>

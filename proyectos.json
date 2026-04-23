@@ -1,0 +1,16 @@
+{
+    ROBOTS: {
+        etapas: {
+            name: "PLAN",
+            subetapas: ["Diseño de solucion", "Analisis de inputs", "Validación Técnica"],
+            name: "DATA",
+            subetapas: ["Solicitud de ingesta", "Validacion de ingesta"],
+            name: "ANALITICA",
+            subetapas:  ["Desarrollo Backend", "Frontend UI", "Productivizacion en Sandbox"],
+        }
+    },
+    BCBS: {
+        "INICIAL": ["Análisis de Requerimiento", "Factibilidad"],
+        "QA": ["Pruebas Unitarias", "Regresión", "UAT"]
+    }
+}
