@@ -74,36 +74,194 @@
         .btn-generate:active {
             transform: translateY(0px);
         }
+
+        .tab-button {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(15, 23, 42, 0.7);
+            color: #94a3b8;
+            transition: all 0.2s ease;
+        }
+
+        .tab-button:hover {
+            color: #e2e8f0;
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+
+        .tab-button.active-tab {
+            color: #e0f2fe;
+            border-color: rgba(56, 189, 248, 0.8);
+            background: rgba(56, 189, 248, 0.2);
+            box-shadow: 0 8px 20px -10px rgba(56, 189, 248, 0.7);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
     <div class="container max-w-4xl w-full glass-panel rounded-2xl p-6 md:p-10">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
-                ⚡ Generador de Tickets Jira
-            </h1>
-            <p class="text-slate-400 mt-2">Configura rápidamente el flujo de trabajo para tu ticket</p>
-        </header>
-
-        <!-- Selector de Proyecto -->
-        <div class="mb-8">
-            <label class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">Proyecto Destino</label>
-            <select id="projectSelect" onchange="loadProject()" 
-                class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none appearance-none cursor-pointer transition-all">
-                <option value="">-- Selecciona un proyecto para ver el mapa --</option>
-            </select>
+        <div class="flex gap-3 mb-8">
+            <button id="tabProyectosBtn" type="button" onclick="switchTab('proyectos')" class="tab-button active-tab px-4 py-2 rounded-lg text-sm font-semibold uppercase tracking-wide">
+                proyectos
+            </button>
+            <button id="tabTareasBtn" type="button" onclick="switchTab('tareas')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold uppercase tracking-wide">
+                tareas
+            </button>
         </div>
 
-        <!-- Mapa de Etapas y Subetapas -->
-        <div id="workflowSection" class="hidden animate-in fade-in duration-500">
-            <div class="grid grid-cols-12 gap-4 mb-2 px-2 text-xs font-bold text-slate-500 uppercase">
-                <div class="col-span-4">Etapa</div>
-                <div class="col-span-8">Sub-Etapas Disponibles</div>
+        <div id="tabProyectos">
+            <header class="text-center mb-8">
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
+                    ⚡ Generador de Tickets Jira
+                </h1>
+                <p class="text-slate-400 mt-2">Configura rápidamente el flujo de trabajo para tu ticket</p>
+            </header>
+
+            <!-- Selector de Proyecto -->
+            <div class="mb-8">
+                <label for="projectSelect" class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">Proyecto Destino</label>
+                <select id="projectSelect" onchange="loadProject()" 
+                    class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none appearance-none cursor-pointer transition-all">
+                    <option value="">-- Selecciona un proyecto --</option>
+                </select>
             </div>
             
-            <div id="workflowContainer" class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 mb-8">
-                <!-- Se llena dinámicamente -->
+            <!-- Mapa de Etapas y Subetapas -->
+            <div id="workflowSection" class="hidden animate-in fade-in duration-500">
+                <div class="grid grid-cols-12 gap-4 mb-2 px-2 text-xs font-bold text-slate-500 uppercase">
+                    <div class="col-span-4">Etapa</div>
+                    <div class="col-span-8">Sub-Etapas Disponibles</div>
+                </div>
+                
+                <div id="workflowContainer" class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2 mb-8">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Formulario de Texto -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label for="summary" class="block text-sm font-semibold text-slate-400 mb-2">Resumen / Título</label>
+                    <input type="text" id="summary" placeholder="Ej: Error en carga de archivo..." 
+                        class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl p-3 focus:border-sky-500 outline-none transition-all">
+                </div>
+                <div>
+                    <label for="description" class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
+                    <input type="text" id="description" placeholder="Breve contexto..." 
+                        class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl p-3 focus:border-sky-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <!-- Botón y Resultado -->
+            <button onclick="generateURL()" class="btn-generate w-full text-white font-bold py-4 rounded-xl text-lg shadow-lg">
+                Generar Link de Jira
+            </button>
+
+            <div id="statusMessage" class="hidden mt-4 p-3 rounded-lg text-center text-sm font-medium"></div>
+
+            <div id="outputContainer" class="hidden mt-6 animate-in slide-in-from-bottom-4 duration-300">
+                <div class="p-4 bg-black/30 border border-slate-700 rounded-xl">
+                    <p class="text-xs text-slate-500 mb-2 font-mono uppercase tracking-widest">URL Generada</p>
+                    <div class="flex items-center gap-3">
+                        <a id="finalURL" href="#" target="_blank" class="text-sky-400 hover:text-sky-300 break-all font-mono text-sm underline decoration-sky-800">La URL generada aparecerá aquí</a>
+                    </div>
+                    <button onclick="copyToClipboard()" class="mt-4 text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors">
+                        Copiar URL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tabTareas" class="hidden">
+            <header class="text-center mb-8">
+                <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
+                    Tareas
+                </h2>
+                <p class="text-slate-400 mt-2">Selecciona un proyecto e ingresa el ID de la tarjeta.</p>
+            </header>
+
+            <!-- Selector de Proyecto y ID de Tarjeta -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label for="projectSelectTareas" class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">Proyecto Destino</label>
+                    <select id="projectSelectTareas" onchange="loadProjectTareas()"
+                        class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none appearance-none cursor-pointer transition-all">
+                        <option value="">-- Selecciona un proyecto --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="cardId" class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">ID de Tarjeta Jira</label>
+                    <input type="text" id="cardId" placeholder="Ej: PROJ-1234..." 
+                        class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none transition-all">
+                </div>
+            </div>
+
+            <!-- Mapa de Etapas y Subetapas -->
+            <div id="workflowSectionTareas" class="hidden animate-in fade-in duration-500 mb-8">
+                <div class="grid grid-cols-12 gap-4 mb-2 px-2 text-xs font-bold text-slate-500 uppercase">
+                    <div class="col-span-4">Etapa</div>
+                    <div class="col-span-8">Sub-Etapas Disponibles</div>
+                </div>
+                
+                <div id="workflowContainerTareas" class="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <div id="taskDetailsSection" class="hidden mt-8 mb-8 p-6 bg-slate-900/40 border border-slate-700 rounded-xl">
+                <p class="text-xs text-slate-500 mb-2 font-mono uppercase tracking-widest">Sub-Etapa Seleccionada</p>
+                <h3 id="taskDetailsSubetapaName" class="text-xl font-bold text-sky-400 mb-6">Selecciona una sub-etapa</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label for="taskTitle" class="block text-sm font-semibold text-slate-400 mb-2">Título</label>
+                        <input type="text" id="taskTitle" placeholder="Ej: Implementar validación..."
+                            class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all"
+                            oninput="syncTaskInlineDetails()">
+                    </div>
+                    <div>
+                        <label for="taskPriority" class="block text-sm font-semibold text-slate-400 mb-2">Prioridad</label>
+                        <select id="taskPriority" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all"
+                            onchange="syncTaskInlineDetails()">
+                            <option value="">-- Selecciona prioridad --</option>
+                            <option value="1">1 - Highest</option>
+                            <option value="2">2 - High</option>
+                            <option value="3">3 - Medium</option>
+                            <option value="4">4 - Low</option>
+                            <option value="5">5 - Lowest</option>
+                            <option value="6">6 - Blocker</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="taskAssignee" class="block text-sm font-semibold text-slate-400 mb-2">Asignado</label>
+                        <input type="text" id="taskAssignee" placeholder="Usuario Jira"
+                            class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all"
+                            oninput="syncTaskInlineDetails()">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="taskDescription" class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
+                    <textarea id="taskDescription" placeholder="Detalles adicionales..."
+                        class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all resize-none h-24"
+                        oninput="syncTaskInlineDetails()"></textarea>
+                </div>
+            </div>
+
+            <button onclick="generateTaskURL()" class="btn-generate w-full text-white font-bold py-4 rounded-xl text-lg shadow-lg mt-8">
+                Generar Link de Jira
+            </button>
+
+            <div id="statusMessageTareas" class="hidden mt-4 p-3 rounded-lg text-center text-sm font-medium"></div>
+
+            <div id="outputContainerTareas" class="hidden mt-6 animate-in slide-in-from-bottom-4 duration-300">
+                <div class="p-4 bg-black/30 border border-slate-700 rounded-xl">
+                    <p class="text-xs text-slate-500 mb-2 font-mono uppercase tracking-widest">URL Generada</p>
+                    <div class="flex items-center gap-3">
+                        <a id="finalURLTareas" href="#" target="_blank" class="text-sky-400 hover:text-sky-300 break-all font-mono text-sm underline decoration-sky-800">La URL generada aparecerá aquí</a>
+                    </div>
+                    <button onclick="copyTaskURLToClipboard()" class="mt-4 text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors">
+                        Copiar URL
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -113,26 +271,31 @@
                 <h2 class="text-2xl font-bold text-sky-400 mb-6">Detalles de <span id="modalSubetapaName"></span></h2>
                 
                 <div class="space-y-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-400 mb-2">Título</label>
-                        <input type="text" id="modalTitle" placeholder="Ej: Implementar validación..." 
-                            class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="modalTitle" class="block text-sm font-semibold text-slate-400 mb-2">Título</label>
+                            <input type="text" id="modalTitle" placeholder="Ej: Implementar validación..." 
+                                class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all">
+                        </div>
+
+                        <div>
+                            <label for="modalPriority" class="block text-sm font-semibold text-slate-400 mb-2">Prioridad</label>
+                            <select id="modalPriority" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all">
+                                <option value="">-- Selecciona prioridad --</option>
+                                <option value="1">1 - Highest</option>
+                                <option value="2">2 - High</option>
+                                <option value="3">3 - Medium</option>
+                                <option value="4">4 - Low</option>
+                                <option value="5">5 - Lowest</option>
+                                <option value="6">6 - Blocker</option>
+                            </select>
+                        </div>
                     </div>
-                    
+
                     <div>
-                        <label class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
+                        <label for="modalDescription" class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
                         <textarea id="modalDescription" placeholder="Detalles adicionales..." 
                             class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all resize-none h-24"></textarea>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold text-slate-400 mb-2">Prioridad</label>
-                        <select id="modalPriority" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:border-sky-500 outline-none transition-all">
-                            <option value="">-- Selecciona prioridad --</option>
-                            <option value="Baja">🟢 Baja</option>
-                            <option value="Media">🟡 Media</option>
-                            <option value="Alta">🔴 Alta</option>
-                        </select>
                     </div>
                 </div>
                 
@@ -146,70 +309,170 @@
                 </div>
             </div>
         </div>
-
-        <!-- Formulario de Texto -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
-                <label class="block text-sm font-semibold text-slate-400 mb-2">Resumen / Título</label>
-                <input type="text" id="summary" placeholder="Ej: Error en carga de archivo..." 
-                    class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl p-3 focus:border-sky-500 outline-none transition-all">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-slate-400 mb-2">Descripción</label>
-                <input type="text" id="description" placeholder="Breve contexto..." 
-                    class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-xl p-3 focus:border-sky-500 outline-none transition-all">
-            </div>
-        </div>
-
-        <!-- Botón y Resultado -->
-        <button onclick="generateURL()" class="btn-generate w-full text-white font-bold py-4 rounded-xl text-lg shadow-lg">
-            Generar Link de Jira
-        </button>
-
-        <div id="statusMessage" class="hidden mt-4 p-3 rounded-lg text-center text-sm font-medium"></div>
-
-        <div id="outputContainer" class="hidden mt-6 animate-in slide-in-from-bottom-4 duration-300">
-            <div class="p-4 bg-black/30 border border-slate-700 rounded-xl">
-                <p class="text-xs text-slate-500 mb-2 font-mono uppercase tracking-widest">URL Generada</p>
-                <div class="flex items-center gap-3">
-                    <a id="finalURL" href="#" target="_blank" class="text-sky-400 hover:text-sky-300 break-all font-mono text-sm underline decoration-sky-800"></a>
-                </div>
-                <button onclick="copyToClipboard()" class="mt-4 text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-colors">
-                    Copiar URL
-                </button>
-            </div>
-        </div>
     </div>
 
     <script>
         let config = {};
+        let activeModalContext = 'tareas';
+        let selectedTaskDetailKey = null;
+
+        // Mapeo de proyectos a etiquetas
+        const projectLabels = {
+            "BCBS": "%23bcbs",
+            "Assistant": "%23assistant",
+            "Robots": "%23robots",
+            "FoW": "%23fow",
+            "Game 2": "%23game_2",
+            "Game 1": "%23game_1"
+        };
+
+        function switchTab(tabName) {
+            const tabProyectos = document.getElementById('tabProyectos');
+            const tabTareas = document.getElementById('tabTareas');
+            const tabProyectosBtn = document.getElementById('tabProyectosBtn');
+            const tabTareasBtn = document.getElementById('tabTareasBtn');
+
+            if (tabName === 'tareas') {
+                tabProyectos.classList.add('hidden');
+                tabTareas.classList.remove('hidden');
+                tabProyectosBtn.classList.remove('active-tab');
+                tabTareasBtn.classList.add('active-tab');
+                populateProjectSelectTareas();
+                return;
+            }
+
+            tabTareas.classList.add('hidden');
+            tabProyectos.classList.remove('hidden');
+            tabTareasBtn.classList.remove('active-tab');
+            tabProyectosBtn.classList.add('active-tab');
+        }
+
+        function populateProjectSelectTareas() {
+            const projectSelect = document.getElementById('projectSelectTareas');
+            // Limpiar opciones previas excepto la primera
+            while (projectSelect.options.length > 1) {
+                projectSelect.remove(1);
+            }
+            // Agregar proyectos
+            for (const projectName in config) {
+                const option = document.createElement('option');
+                option.value = projectName;
+                option.innerText = projectName;
+                projectSelect.appendChild(option);
+            }
+        }
 
         // Datos embebidos directamente en el HTML
         const projectsData = {
-            "ROBOTS": {
+            "Assistant": {
                 "etapas": [
                     {
                         "name": "PLAN",
-                        "subetapas": [
-                            "Diseño de solucion",
-                            "Analisis de inputs",
-                            "Validación Técnica"
-                        ]
+                        "subetapas": ["Diseño de solucion"]
                     },
                     {
                         "name": "DATA",
-                        "subetapas": [
-                            "Solicitud de ingesta",
-                            "Validacion de ingesta"
-                        ]
+                        "subetapas": ["Refinamiento de documentos"]
                     },
                     {
                         "name": "ANALITICA",
-                        "subetapas": [
-                            "Desarrollo Backend",
-                            "Frontend UI",
-                            "Productivizacion en Sandbox"
-                        ]
+                        "subetapas": ["Diseño y orquestacion", "Validacion/Testing"]
+                    },
+                    {
+                        "name": "CANAL",
+                        "subetapas": ["Productivizacion"]
+                    }
+                ]
+            },
+            "Game 2": {
+                "etapas": [
+                    {
+                        "name": "PLAN",
+                        "subetapas": ["Analisis del proyecto", "Diseño de la solución"]
+                    },
+                    {
+                        "name": "DATA",
+                        "subetapas": ["Solicitud de ingesta", "Validacion de ingesta"]
+                    },
+                    {
+                        "name": "ANALITICA",
+                        "subetapas": ["Desarrollo Analitico", "Prod. Sandbox"]
+                    },
+                    {
+                        "name": "CANAL",
+                        "subetapas": ["Productivizacion"]
+                    }
+                ]
+            },
+            "Robots": {
+                "etapas": [
+                    {
+                        "name": "PLAN",
+                        "subetapas": ["Analisis del proyecto", "Diseño de la solución"]
+                    },
+                    {
+                        "name": "DATA",
+                        "subetapas": ["Solicitud de ingesta", "Validacion de ingesta"]
+                    },
+                    {
+                        "name": "ANALITICA",
+                        "subetapas": ["Desarrollo Analitico", "Prod. Sandbox"]
+                    },
+                    {
+                        "name": "CANAL",
+                        "subetapas": ["Productivizacion"]
+                    }
+                ]
+            },
+            "FoW": {
+                "etapas": [
+                    {
+                        "name": "Discovery",
+                        "subetapas": ["Investigación", "Wireframes", "Prototipo"]
+                    },
+                    {
+                        "name": "Ejecución",
+                        "subetapas": ["Diseño", "Desarrollo", "Testing"]
+                    },
+                    {
+                        "name": "Entrega",
+                        "subetapas": ["Validación", "Deploy", "Support"]
+                    }
+                ]
+            },
+            "BCBS": {
+                "etapas": [
+                    {
+                        "name": "Gobierno",
+                        "subetapas": ["Requerimientos", "Análisis", "Aprobación"]
+                    },
+                    {
+                        "name": "Calidad",
+                        "subetapas": ["Desarrollo", "Unit Testing", "Integración"]
+                    },
+                    {
+                        "name": "Assessments",
+                        "subetapas": ["QA", "Compliance", "Release"]
+                    }
+                ]
+            },
+            "Game 1": {
+                "etapas": [
+                    {
+                        "name": "PLAN",
+                        "subetapas": ["Analisis del proyecto", "Diseño de la solución"]
+                    },
+                    {
+                        "name": "DATA",
+                        "subetapas": ["Solicitud de ingesta", "Validacion de ingesta"]
+                    },
+                    {
+                        "name": "ANALITICA",
+                        "subetapas": ["Desarrollo Analitico", "Prod. Sandbox"]
+                    },
+                    {
+                        "name": "CANAL",
+                        "subetapas": ["Productivizacion"]
                     }
                 ]
             }
@@ -253,7 +516,10 @@
 
         let selectedEtapa = null;
         let selectedSub = null;
-        let selectedSubDetails = {}; // Almacenar detalles del modal
+    let selectedSubDetails = {}; // Proyectos
+    let selectedTaskEtapa = null;
+    let selectedTaskSub = null;
+    let selectedTaskSubDetails = {}; // Tareas
 
         function loadProject() {
             const project = document.getElementById('projectSelect').value;
@@ -267,15 +533,33 @@
             document.getElementById('outputContainer').classList.add('hidden');
             hideMessage();
 
-            if (!config[project]) {
+            // En esta vista no se utiliza el mapa de etapas/subetapas.
+            workflowSection.classList.add('hidden');
+        }
+
+        function loadProjectTareas() {
+            const project = document.getElementById('projectSelectTareas').value;
+            const workflowSection = document.getElementById('workflowSectionTareas');
+            const container = document.getElementById('workflowContainerTareas');
+            
+            // Reset
+            container.innerHTML = '';
+            selectedTaskEtapa = null;
+            selectedTaskSub = null;
+            selectedTaskDetailKey = null;
+            document.getElementById('outputContainerTareas').classList.add('hidden');
+            document.getElementById('taskDetailsSection').classList.add('hidden');
+            hideTaskMessage();
+
+            if (!project || !projectsData[project]) {
                 workflowSection.classList.add('hidden');
                 return;
             }
 
             workflowSection.classList.remove('hidden');
 
-            // Crear el mapa visual según la imagen de referencia
-            Object.keys(config[project]).forEach(etapa => {
+            // Crear el mapa visual de etapas y subetapas
+            projectsData[project].etapas.forEach(etapa => {
                 const row = document.createElement('div');
                 row.className = 'grid grid-cols-12 gap-4 items-start';
 
@@ -284,35 +568,37 @@
                 etapaCol.className = 'col-span-4';
                 
                 const etapaBox = document.createElement('div');
-                etapaBox.id = `etapa-box-${etapa}`;
                 etapaBox.className = 'stage-item bg-slate-800/50 p-4 rounded-xl text-center font-bold text-slate-300 h-full flex items-center justify-center';
-                etapaBox.innerText = etapa;
+                etapaBox.innerText = etapa.name;
                 etapaCol.appendChild(etapaBox);
 
                 // Columna Sub-etapas (Derecha)
                 const subsCol = document.createElement('div');
                 subsCol.className = 'col-span-8 flex flex-wrap gap-2';
 
-                config[project][etapa].forEach(sub => {
+                etapa.subetapas.forEach(sub => {
                     const subBox = document.createElement('div');
+                    const taskKey = `${project}::${etapa.name}::${sub}`;
                     subBox.className = 'stage-item bg-slate-800/30 px-4 py-3 rounded-lg cursor-pointer text-sm text-slate-400 hover:text-white';
                     subBox.innerText = sub;
-                    
+
+                    if (selectedTaskSubDetails[taskKey]) {
+                        subBox.classList.add('active-sub');
+                        etapaBox.classList.add('active-stage');
+                    }
+
                     subBox.onclick = () => {
-                        // Limpiar previos
-                        document.querySelectorAll('.stage-item').forEach(el => {
+                        document.querySelectorAll('#workflowContainerTareas .stage-item').forEach(el => {
                             el.classList.remove('active-sub', 'active-stage');
                         });
 
-                        // Marcar selección
-                        selectedEtapa = etapa;
-                        selectedSub = sub;
+                        selectedTaskEtapa = etapa.name;
+                        selectedTaskSub = sub;
+                        selectedTaskDetailKey = taskKey;
                         subBox.classList.add('active-sub');
                         etapaBox.classList.add('active-stage');
-                        
-                        // Abrir modal para detalles
-                        openSubetapaModal(sub);
-                        hideMessage();
+                        openTaskInlineForm(project, sub, taskKey);
+                        hideTaskMessage();
                     };
 
                     subsCol.appendChild(subBox);
@@ -330,31 +616,27 @@
             const description = document.getElementById('description').value;
 
             if (!project) {
-                showMessage("Por favor, selecciona un proyecto primero.", "error");
-                return;
-            }
-            if (!selectedSub) {
-                showMessage("Debes seleccionar una Sub-Etapa del mapa.", "error");
+                showMessage("Por favor, selecciona un proyecto.", "error");
                 return;
             }
             if (!summary.trim()) {
                 showMessage("El resumen es obligatorio.", "error");
                 return;
             }
+            if (!description.trim()) {
+                showMessage("La descripción es obligatoria.", "error");
+                return;
+            }
 
-            // Construcción de la URL
-            const baseUrl = "https://tu-jira.atlassian.net/secure/CreateIssueDetails!init.jspa";
-            const params = new URLSearchParams({
-                pid: project === 'ROBOTS' ? '10001' : '10002', // IDs de ejemplo
-                issuetype: '10001', // Tipo de tarea
-                summary: summary,
-                description: description,
-                // Campos personalizados (ajustar según tu Jira real)
-                'customfield_101': selectedEtapa, 
-                'customfield_102': selectedSub
-            });
+            const generatedSummary = `[${project}] ${summary.trim()}`;
 
-            const finalLink = `${baseUrl}?${params.toString()}`;
+            // Codificación URL para espacios, acentos y caracteres como Ñ.
+            const encodedSummary = encodeURIComponent(generatedSummary);
+            const encodedDescription = encodeURIComponent(description.trim());
+
+            const baseUrl = "https://jira.globaldevtools.bbva.com/CreateIssueDetails!init.jspa";
+            const label = projectLabels[project] || "%23one4dpm";
+            const finalLink = `${baseUrl}?pid=15219&issuetype=10000&summary=${encodedSummary}&description=${encodedDescription}&priority=3&customfield_13300=2471776&customfield_10270=10225&assignee=marcelogabriel.gonzalez&customfield_10006=${encodedSummary}&labels=${label}`;
             
             const output = document.getElementById('outputContainer');
             const linkElem = document.getElementById('finalURL');
@@ -366,6 +648,75 @@
             showMessage("¡Link generado con éxito!", "success");
         }
 
+        function openTaskInlineForm(project, subetapa, detailKey) {
+            const details = selectedTaskSubDetails[detailKey] || {};
+            document.getElementById('taskDetailsSubetapaName').innerText = `[${project}] ${subetapa}`;
+            document.getElementById('taskTitle').value = details.title || '';
+            document.getElementById('taskPriority').value = details.priority || '';
+            document.getElementById('taskAssignee').value = details.assignee || '';
+            document.getElementById('taskDescription').value = details.description || '';
+            document.getElementById('taskDetailsSection').classList.remove('hidden');
+            document.getElementById('taskTitle').focus();
+        }
+
+        function syncTaskInlineDetails() {
+            if (!selectedTaskDetailKey) {
+                return;
+            }
+
+            selectedTaskSubDetails[selectedTaskDetailKey] = {
+                title: document.getElementById('taskTitle').value.trim(),
+                description: document.getElementById('taskDescription').value.trim(),
+                priority: document.getElementById('taskPriority').value,
+                assignee: document.getElementById('taskAssignee').value.trim()
+            };
+        }
+
+        function generateTaskURL() {
+            const project = document.getElementById('projectSelectTareas').value;
+            const cardId = document.getElementById('cardId').value.trim();
+
+            if (!project) {
+                showTaskMessage("Por favor, selecciona un proyecto.", "error");
+                return;
+            }
+            if (!cardId) {
+                showTaskMessage("El ID de la tarjeta Jira es obligatorio.", "error");
+                return;
+            }
+            if (!selectedTaskSub || !selectedTaskEtapa) {
+                showTaskMessage("Debes seleccionar una sub-etapa del mapa.", "error");
+                return;
+            }
+
+            syncTaskInlineDetails();
+
+            const taskKey = `${project}::${selectedTaskEtapa}::${selectedTaskSub}`;
+            const taskDetails = selectedTaskSubDetails[taskKey];
+
+            if (!taskDetails || !taskDetails.title || !taskDetails.description || !taskDetails.priority || !taskDetails.assignee) {
+                showTaskMessage("Completa título, descripción, prioridad y asignado para la sub-etapa seleccionada.", "error");
+                return;
+            }
+
+            const generatedSummary = `[${project}] ${taskDetails.title}`;
+            const encodedSummary = encodeURIComponent(generatedSummary);
+            const encodedDescription = encodeURIComponent(taskDetails.description);
+            const encodedAssignee = encodeURIComponent(taskDetails.assignee);
+            const baseUrl = "https://jira.globaldevtools.bbva.com/CreateIssueDetails!init.jspa";
+            const label = projectLabels[project] || "%23one4dpm";
+            const finalLink = `${baseUrl}?pid=15219&issuetype=10000&summary=${encodedSummary}&description=${encodedDescription}&priority=${taskDetails.priority}&customfield_13300=2471776&customfield_10270=10225&assignee=${encodedAssignee}&customfield_10006=${encodedSummary}&labels=${label}`;
+
+            const output = document.getElementById('outputContainerTareas');
+            const linkElem = document.getElementById('finalURLTareas');
+
+            linkElem.innerText = finalLink;
+            linkElem.href = finalLink;
+            output.classList.remove('hidden');
+
+            showTaskMessage(`¡Link generado con éxito para ${selectedTaskSub}!`, "success");
+        }
+
         function showMessage(text, type) {
             const msg = document.getElementById('statusMessage');
             msg.innerText = text;
@@ -374,8 +725,20 @@
             }`;
         }
 
+        function showTaskMessage(text, type) {
+            const msg = document.getElementById('statusMessageTareas');
+            msg.innerText = text;
+            msg.className = `mt-4 p-3 rounded-lg text-center text-sm font-medium block animate-bounce ${
+                type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'
+            }`;
+        }
+
         function hideMessage() {
             document.getElementById('statusMessage').classList.add('hidden');
+        }
+
+        function hideTaskMessage() {
+            document.getElementById('statusMessageTareas').classList.add('hidden');
         }
 
         function copyToClipboard() {
@@ -393,20 +756,39 @@
             document.body.removeChild(textArea);
         }
 
-        function openSubetapaModal(subetapa) {
+        function copyTaskURLToClipboard() {
+            const text = document.getElementById('finalURLTareas').innerText;
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showTaskMessage("URL copiada al portapapeles", "success");
+            } catch (err) {
+                console.error('Error al copiar', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function openSubetapaModal(subetapa, detailKey = subetapa) {
             console.log('Abriendo modal para:', subetapa);
             document.getElementById('modalSubetapaName').innerText = subetapa;
             
+            const detailsStore = activeModalContext === 'tareas' ? selectedTaskSubDetails : selectedSubDetails;
+
             // Cargar datos previos si existen
-            if (selectedSubDetails[subetapa]) {
-                document.getElementById('modalTitle').value = selectedSubDetails[subetapa].title || '';
-                document.getElementById('modalDescription').value = selectedSubDetails[subetapa].description || '';
-                document.getElementById('modalPriority').value = selectedSubDetails[subetapa].priority || '';
+            if (detailsStore[detailKey]) {
+                document.getElementById('modalTitle').value = detailsStore[detailKey].title || '';
+                document.getElementById('modalDescription').value = detailsStore[detailKey].description || '';
+                document.getElementById('modalPriority').value = detailsStore[detailKey].priority || '';
             } else {
                 document.getElementById('modalTitle').value = '';
                 document.getElementById('modalDescription').value = '';
                 document.getElementById('modalPriority').value = '';
             }
+
+            document.getElementById('subetapaModal').dataset.detailKey = detailKey;
             
             document.getElementById('subetapaModal').classList.remove('hidden');
             document.getElementById('modalTitle').focus();
@@ -420,22 +802,40 @@
             const title = document.getElementById('modalTitle').value.trim();
             const description = document.getElementById('modalDescription').value.trim();
             const priority = document.getElementById('modalPriority').value;
+            const detailKey = document.getElementById('subetapaModal').dataset.detailKey;
             
             if (!title) {
                 alert('El título es obligatorio');
                 return;
             }
+            if (!description) {
+                alert('La descripción es obligatoria');
+                return;
+            }
+            if (!priority) {
+                alert('La prioridad es obligatoria');
+                return;
+            }
+
+            const detailsStore = activeModalContext === 'tareas' ? selectedTaskSubDetails : selectedSubDetails;
             
             // Guardar los detalles
-            selectedSubDetails[selectedSub] = {
+            detailsStore[detailKey] = {
                 title: title,
                 description: description,
                 priority: priority
             };
             
-            console.log('Detalles guardados para:', selectedSub, selectedSubDetails[selectedSub]);
+            console.log('Detalles guardados para:', detailKey, detailsStore[detailKey]);
             
             closeSubetapaModal();
+
+            if (activeModalContext === 'tareas') {
+                loadProjectTareas();
+                showTaskMessage(`✓ Detalles guardados para: ${selectedTaskSub}`, 'success');
+                return;
+            }
+
             showMessage(`✓ Detalles guardados para: ${selectedSub}`, 'success');
         }
 
