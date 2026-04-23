@@ -175,10 +175,10 @@
                 <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400">
                     Tareas
                 </h2>
-                <p class="text-slate-400 mt-2">Selecciona un proyecto e ingresa el ID de la tarjeta.</p>
+                <p class="text-slate-400 mt-2">Selecciona un proyecto e ingresa el ID del proyecto.</p>
             </header>
 
-            <!-- Selector de Proyecto y ID de Tarjeta -->
+            <!-- Selector de Proyecto e ID de Proyecto -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                     <label for="projectSelectTareas" class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">Proyecto Destino</label>
@@ -188,8 +188,8 @@
                     </select>
                 </div>
                 <div>
-                    <label for="cardId" class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">ID de Tarjeta Jira</label>
-                    <input type="text" id="cardId" placeholder="Ej: PROJ-1234..." 
+                    <label for="cardId" class="block text-sm font-semibold text-sky-400 uppercase tracking-wider mb-2">ID de Proyecto (customfield_10004)</label>
+                    <input type="text" id="cardId" placeholder="Ej: ADHUC-214048..." 
                         class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-3 focus:ring-2 focus:ring-sky-500 outline-none transition-all">
                 </div>
             </div>
@@ -325,6 +325,63 @@
             "Game 2": "%23game_2",
             "Game 1": "%23game_1"
         };
+
+        // Labels opcionales por sub-etapa.
+        // Formato de key: "Proyecto::Etapa::Subetapa"
+        // Valor esperado: label URL-encoded (por ejemplo "%23mi_label") o sin encoding ("#mi_label").
+        const subetapaLabels = {
+            // "Assistant::PLAN::Diseño de solucion": "%23assistant_plan"
+        };
+
+        function normalizeLabelValue(labelValue) {
+            if (!labelValue) {
+                return '';
+            }
+
+            const trimmed = String(labelValue).trim();
+            if (!trimmed) {
+                return '';
+            }
+
+            if (trimmed.includes('%23')) {
+                return trimmed;
+            }
+
+            const withHash = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+            return encodeURIComponent(withHash);
+        }
+
+        function getSubetapaName(subetapa) {
+            if (typeof subetapa === 'string') {
+                return subetapa;
+            }
+            return subetapa && subetapa.name ? subetapa.name : '';
+        }
+
+        function getSubetapaLabel(project, etapaName, subetapaName) {
+            const key = `${project}::${etapaName}::${subetapaName}`;
+
+            if (subetapaLabels[key]) {
+                return normalizeLabelValue(subetapaLabels[key]);
+            }
+
+            const projectConfig = projectsData[project];
+            if (!projectConfig) {
+                return '';
+            }
+
+            const etapa = projectConfig.etapas.find(item => item.name === etapaName);
+            if (!etapa) {
+                return '';
+            }
+
+            const matchedSubetapa = etapa.subetapas.find(sub => getSubetapaName(sub) === subetapaName);
+            if (!matchedSubetapa || typeof matchedSubetapa === 'string') {
+                return '';
+            }
+
+            return normalizeLabelValue(matchedSubetapa.label);
+        }
 
         function switchTab(tabName) {
             const tabProyectos = document.getElementById('tabProyectos');
@@ -489,7 +546,7 @@
                 for (const projectName in jsonData) {
                     config[projectName] = {};
                     jsonData[projectName].etapas.forEach(etapa => {
-                        config[projectName][etapa.name] = etapa.subetapas;
+                        config[projectName][etapa.name] = etapa.subetapas.map(getSubetapaName).filter(Boolean);
                     });
                 }
                 
@@ -576,7 +633,12 @@
                 const subsCol = document.createElement('div');
                 subsCol.className = 'col-span-8 flex flex-wrap gap-2';
 
-                etapa.subetapas.forEach(sub => {
+                etapa.subetapas.forEach(rawSub => {
+                    const sub = getSubetapaName(rawSub);
+                    if (!sub) {
+                        return;
+                    }
+
                     const subBox = document.createElement('div');
                     const taskKey = `${project}::${etapa.name}::${sub}`;
                     subBox.className = 'stage-item bg-slate-800/30 px-4 py-3 rounded-lg cursor-pointer text-sm text-slate-400 hover:text-white';
@@ -681,7 +743,7 @@
                 return;
             }
             if (!cardId) {
-                showTaskMessage("El ID de la tarjeta Jira es obligatorio.", "error");
+                showTaskMessage("El ID de proyecto (customfield_10004) es obligatorio.", "error");
                 return;
             }
             if (!selectedTaskSub || !selectedTaskEtapa) {
@@ -699,13 +761,16 @@
                 return;
             }
 
-            const generatedSummary = `[${project}] ${taskDetails.title}`;
+            const generatedSummary = `[${selectedTaskEtapa}] ${taskDetails.title}`;
             const encodedSummary = encodeURIComponent(generatedSummary);
             const encodedDescription = encodeURIComponent(taskDetails.description);
             const encodedAssignee = encodeURIComponent(taskDetails.assignee);
+            const encodedProjectId = encodeURIComponent(cardId);
             const baseUrl = "https://jira.globaldevtools.bbva.com/CreateIssueDetails!init.jspa";
-            const label = projectLabels[project] || "%23one4dpm";
-            const finalLink = `${baseUrl}?pid=15219&issuetype=10000&summary=${encodedSummary}&description=${encodedDescription}&priority=${taskDetails.priority}&customfield_13300=2471776&customfield_10270=10225&assignee=${encodedAssignee}&customfield_10006=${encodedSummary}&labels=${label}`;
+            const projectLabel = projectLabels[project] || "%23one4dpm";
+            const subetapaLabel = getSubetapaLabel(project, selectedTaskEtapa, selectedTaskSub);
+            const label = subetapaLabel || projectLabel;
+            const finalLink = `${baseUrl}?pid=15219&issuetype=10000&summary=${encodedSummary}&description=${encodedDescription}&priority=${taskDetails.priority}&customfield_13300=2471776&assignee=${encodedAssignee}&customfield_10006=${encodedSummary}&customfield_10270=10225&customfield_10004=${encodedProjectId}&labels=${label}`;
 
             const output = document.getElementById('outputContainerTareas');
             const linkElem = document.getElementById('finalURLTareas');
